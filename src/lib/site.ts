@@ -1,0 +1,27 @@
+export const SITE = {
+  name: "SnapTranslate",
+  url: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+  title: "Image Translator — Translate Text From Photos Online",
+  description:
+    "Upload an image and instantly extract and translate text with our online photo translator. Translate screenshots, documents, signs, menus, and more.",
+  tagline: "Translate text from images quickly, simply, and privately.",
+  contactEmail: "hello@snaptranslate.app",
+  keywords: [
+    "image translator",
+    "photo translator",
+    "translate image",
+    "translate text from image",
+    "picture translator",
+    "screenshot translator",
+    "OCR translator",
+    "image to text translator",
+  ],
+};
+
+export const NAV_LINKS = [
+  { href: "/#top", label: "Home" },
+  { href: "/#how-it-works", label: "How It Works" },
+  { href: "/#features", label: "Features" },
+  { href: "/#use-cases", label: "Use Cases" },
+  { href: "/#faq", label: "FAQ" },
+];

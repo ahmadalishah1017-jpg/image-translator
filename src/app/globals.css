@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --color-ink: #0b1437;
+  --color-ink-soft: #4a5578;
+  --color-ink-muted: #7a84a3;
+  --color-line: #e5e8f2;
+  --color-surface: #f6f7fc;
+
+  --color-brand-50: #eef2ff;
+  --color-brand-100: #e0e7ff;
+  --color-brand-500: #4f5bf0;
+  --color-brand-600: #3b46e0;
+  --color-brand-700: #2f37b8;
+
+  --shadow-card: 0 1px 2px rgb(11 20 55 / 0.04), 0 8px 24px -8px rgb(11 20 55 / 0.08);
+  --shadow-lift: 0 2px 4px rgb(11 20 55 / 0.04), 0 24px 48px -16px rgb(59 70 224 / 0.22);
+
+  --animate-progress: progress-slide 1.4s ease-in-out infinite;
+  --animate-fade-up: fade-up 0.4s ease-out both;
+
+  @keyframes progress-slide {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(250%); }
+  }
+  @keyframes fade-up {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+
+@utility bg-brand-gradient {
+  background-image: linear-gradient(120deg, #2563eb 0%, #5b4cf0 55%, #8b3df0 100%);
+}
+
+@utility text-brand-gradient {
+  background-image: linear-gradient(120deg, #2563eb 0%, #5b4cf0 55%, #8b3df0 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 5rem;
+  }
+
+  body {
+    background: #ffffff;
+    color: var(--color-ink);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 2px;
+  }
+}
+
+/* Native <details> FAQ: hide default marker */
+summary::-webkit-details-marker {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
