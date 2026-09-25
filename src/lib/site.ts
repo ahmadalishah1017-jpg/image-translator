@@ -1,6 +1,30 @@
+/**
+ * Public site URL. Uses NEXT_PUBLIC_SITE_URL when it's a valid URL, otherwise Vercel's
+ * production/deployment domain, otherwise localhost. Blank or malformed values are ignored
+ * so a misconfigured env var can't break the build.
+ */
+function resolveSiteUrl(): string {
+  const candidates = [
+    process.env.NEXT_PUBLIC_SITE_URL,
+    process.env.VERCEL_PROJECT_PRODUCTION_URL,
+    process.env.VERCEL_URL,
+  ];
+  for (const raw of candidates) {
+    const value = raw?.trim();
+    if (!value) continue;
+    const withProtocol = /^https?:\/\//i.test(value) ? value : `https://${value}`;
+    try {
+      return new URL(withProtocol).origin;
+    } catch {
+      // Not a valid URL — try the next candidate.
+    }
+  }
+  return "http://localhost:3000";
+}
+
 export const SITE = {
   name: "SnapTranslate",
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+  url: resolveSiteUrl(),
   title: "Image Translator — Translate Text From Photos Online",
   description:
     "Upload an image and instantly extract and translate text with our online photo translator. Translate screenshots, documents, signs, menus, and more.",
