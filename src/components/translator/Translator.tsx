@@ -1,30 +1,18 @@
 "use client";
 
-import { ArrowRight, ImagePlus, Info, Sparkles } from "lucide-react";
+import { ArrowRight, CircleCheck, ImageDown, Info, Sparkles, TriangleAlert } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { btn, card } from "@/components/ui";
 import { baseFilename, downloadBlob } from "@/lib/download";
 import { AppError, toAppError } from "@/lib/errors";
 import { addScan, scanTitle, type ScanRecord } from "@/lib/history";
-import {
-  loadImage,
-  makeThumbnail,
-  renderTextCard,
-  renderTranslatedImage,
-  validateImageFile,
-  type LoadedImage,
-} from "@/lib/image";
+import { loadImage, renderTranslatedImage, validateImageFile, type LoadedImage } from "@/lib/image";
 import { AUTO_DETECT, getLanguage, languageName } from "@/lib/languages";
 import { setPreferredTarget, usePreferredTarget } from "@/lib/preferences";
 import { tesseractOcr } from "@/lib/services/ocr/tesseract";
-import type { TextSegment } from "@/lib/services/ocr/types";
 import {
-  detectLanguage,
   extractText,
-  segmentsToText,
   segmentText,
-  joinUnits,
-  textToUnits,
   translateTexts,
   type Extraction,
   type PipelineProgress,
@@ -35,26 +23,19 @@ import { ImagePanel } from "./ImagePanel";
 import { LanguageSelect } from "./LanguageSelect";
 import { ProgressIndicator } from "./ProgressIndicator";
 import { RecentScans } from "./RecentScans";
-import { ResultsPanel } from "./ResultsPanel";
 import { UploadZone } from "./UploadZone";
 
-type Stage = "idle" | "ready" | "extracting" | "translating" | "done";
+type Stage = "idle" | "ready" | "reading" | "translating" | "done";
 
 interface TranslationResult {
-  /** One entry per translated unit (aligned with `segments` when present). */
-  translations: string[];
-  translatedText: string;
+  /** Object URL of the full-resolution translated image, or a stored preview when reopened from history. */
+  imageUrl: string;
+  blob?: Blob;
   target: string;
   requestedSource: string;
   detectedSource?: string;
-  originalText: string;
-  /** Present when the translation maps 1:1 onto OCR segments, enabling the image overlay. */
-  segments?: TextSegment[];
   lowConfidence: boolean;
-}
-
-interface HistorySnapshot {
-  thumbnail?: string;
+  fromHistory?: boolean;
   title: string;
 }
 
@@ -62,22 +43,25 @@ export function Translator() {
   const target = usePreferredTarget();
   const [stage, setStage] = useState<Stage>("idle");
   const [image, setImage] = useState<LoadedImage | null>(null);
-  const [historySnapshot, setHistorySnapshot] = useState<HistorySnapshot | null>(null);
   const [source, setSource] = useState(AUTO_DETECT);
   const [extraction, setExtraction] = useState<Extraction | null>(null);
-  const [originalText, setOriginalText] = useState("");
-  const [edited, setEdited] = useState(false);
   const [result, setResult] = useState<TranslationResult | null>(null);
   const [progress, setProgress] = useState<PipelineProgress>({ label: "", value: 0 });
   const [error, setError] = useState<AppError | null>(null);
 
   const runRef = useRef(0);
-  const thumbnailRef = useRef<string | undefined>(undefined);
   const translateButtonRef = useRef<HTMLButtonElement>(null);
-  const resultsRef = useRef<HTMLDivElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
 
-  const busy = stage === "extracting" || stage === "translating";
+  const busy = stage === "reading" || stage === "translating";
+
+  // Revoke the previous translated image's object URL whenever it's replaced.
+  useEffect(() => {
+    const url = result?.imageUrl;
+    return () => {
+      if (url?.startsWith("blob:")) URL.revokeObjectURL(url);
+    };
+  }, [result?.imageUrl]);
 
   const resetWorkspace = useCallback(() => {
     runRef.current++; // invalidate any in-flight run
@@ -85,11 +69,7 @@ export function Translator() {
       if (prev) URL.revokeObjectURL(prev.url);
       return null;
     });
-    thumbnailRef.current = undefined;
-    setHistorySnapshot(null);
     setExtraction(null);
-    setOriginalText("");
-    setEdited(false);
     setResult(null);
     setStage("idle");
   }, []);
@@ -126,48 +106,44 @@ export function Translator() {
     return () => window.removeEventListener("paste", onPaste);
   }, [busy, handleFile]);
 
-  // Release the worker's memory when leaving the page.
+  // Release the OCR worker's memory when leaving the page.
   useEffect(() => () => void tesseractOcr.dispose?.(), []);
 
-  async function run(nextTarget = target) {
-    if (busy) return;
+  async function run() {
+    if (busy || !image) return;
     const runId = ++runRef.current;
     const isCurrent = () => runRef.current === runId;
+    const nextTarget = target;
     setError(null);
 
     let ex = extraction;
-    let text = originalText;
-    let isEdited = edited;
-    let phase: "extracting" | "translating" = "extracting";
+    let phase: "reading" | "translating" = "reading";
 
     try {
-      // OCR only when needed: new image, or a different source language (and the text wasn't hand-edited).
-      if (image && !isEdited && (!ex || ex.requestedSource !== source)) {
-        setStage("extracting");
+      // Read the image only when needed: first run, or a different source language.
+      if (!ex || ex.requestedSource !== source) {
+        setStage("reading");
         setProgress({ label: "Preparing image…", value: 0 });
         ex = await extractText(image, source, tesseractOcr, (p) => isCurrent() && setProgress(p));
         if (!isCurrent()) return;
-        text = segmentsToText(ex.segments);
-        isEdited = false;
         setExtraction(ex);
-        setOriginalText(text);
-        setEdited(false);
       }
 
-      const fromSegments = Boolean(image && ex && !isEdited);
-      const units = fromSegments
-        ? ex!.segments.map((s) => ({ text: segmentText(s), paragraph: s.paragraph }))
-        : textToUnits(text);
-      const texts = units.map((u) => u.text);
-      if (!texts.length) throw new AppError("NO_TEXT");
-
-      const translationSource =
-        source !== AUTO_DETECT ? source : (ex?.detectedSource ?? detectLanguage(text) ?? AUTO_DETECT);
+      const translationSource = source !== AUTO_DETECT ? source : (ex.detectedSource ?? AUTO_DETECT);
 
       phase = "translating";
       setStage("translating");
       setProgress({ label: `Translating into ${languageName(nextTarget)}…`, value: 0 });
-      const res = await translateTexts(texts, translationSource, nextTarget, apiTranslationService);
+      const res = await translateTexts(
+        ex.segments.map(segmentText),
+        translationSource,
+        nextTarget,
+        apiTranslationService,
+      );
+      if (!isCurrent()) return;
+
+      setProgress({ label: "Placing the translation on your image…", value: 1 });
+      const { blob, preview } = await renderTranslatedImage(image, ex.segments, res.translations, nextTarget);
       if (!isCurrent()) return;
 
       const detectedSource =
@@ -177,88 +153,75 @@ export function Translator() {
             ? translationSource
             : getLanguage(res.detectedSource)?.code;
 
-      const next: TranslationResult = {
-        translations: res.translations,
-        translatedText: joinUnits(res.translations, units.map((u) => u.paragraph)),
+      const title = scanTitle(image.name);
+      setResult({
+        imageUrl: URL.createObjectURL(blob),
+        blob,
         target: nextTarget,
         requestedSource: source,
         detectedSource,
-        originalText: text,
-        segments: fromSegments ? ex!.segments : undefined,
-        lowConfidence: fromSegments && Boolean(ex?.lowConfidence),
-      };
-      setResult(next);
+        lowConfidence: ex.lowConfidence,
+        title,
+      });
       setStage("done");
 
-      if (image && !thumbnailRef.current) thumbnailRef.current = makeThumbnail(image);
       addScan({
         id: crypto.randomUUID(),
-        title: scanTitle(text, historySnapshot?.title ?? baseFilename(image?.name ?? "Scan")),
+        title,
         createdAt: Date.now(),
         sourceLang: source,
         detectedLang: detectedSource,
         targetLang: nextTarget,
-        originalText: text,
-        translatedText: next.translatedText,
-        thumbnail: thumbnailRef.current ?? historySnapshot?.thumbnail,
+        preview,
       });
 
-      requestAnimationFrame(() => {
-        resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-        resultsRef.current?.focus({ preventScroll: true });
-      });
+      requestAnimationFrame(() => rootRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
     } catch (err) {
       if (!isCurrent() || (err as Error).name === "AbortError") return;
       setError(toAppError(err, phase === "translating" ? "TRANSLATION_FAILED" : "OCR_FAILED"));
-      setStage(result ? "done" : image ? "ready" : "done");
+      setStage(result ? "done" : "ready");
     }
   }
 
   function openFromHistory(record: ScanRecord) {
     resetWorkspace();
     setError(null);
-    setHistorySnapshot({ thumbnail: record.thumbnail, title: record.title });
+    if (!record.preview) {
+      setError(new AppError("IMAGE_UNREADABLE", "The preview for this scan is no longer available."));
+      return;
+    }
     setSource(record.sourceLang);
-    setPreferredTarget(record.targetLang);
-    setOriginalText(record.originalText);
     setResult({
-      translations: [record.translatedText],
-      translatedText: record.translatedText,
+      imageUrl: record.preview,
       target: record.targetLang,
       requestedSource: record.sourceLang,
       detectedSource: record.detectedLang,
-      originalText: record.originalText,
       lowConfidence: false,
+      fromHistory: true,
+      title: record.title,
     });
     setStage("done");
     requestAnimationFrame(() => rootRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }));
   }
 
-  async function downloadImage() {
+  async function download() {
     if (!result) return;
-    const name = baseFilename(image?.name ?? result.originalText.slice(0, 30));
-    try {
-      const blob =
-        image && result.segments
-          ? await renderTranslatedImage(image, result.segments, result.translations, result.target)
-          : await renderTextCard(result.translatedText, result.target, `${languageName(result.target)} translation`);
-      downloadBlob(blob, `${name}-${result.target}.png`);
-    } catch {
-      setError(new AppError("IMAGE_UNREADABLE", "We couldn't create the image. Download the translation as text instead."));
+    const name = `${baseFilename(image?.name ?? result.title)}-${result.target}`;
+    if (result.blob) {
+      downloadBlob(result.blob, `${name}.png`);
+    } else {
+      const blob = await (await fetch(result.imageUrl)).blob();
+      downloadBlob(blob, `${name}-preview.jpg`);
     }
   }
 
   const showWorkspace = stage !== "idle";
-  const stale =
-    !!result &&
-    !busy &&
-    (result.target !== target || result.requestedSource !== source || result.originalText !== originalText);
-
-  const sourceLabel =
+  const upToDate = !!result && result.target === target && result.requestedSource === source;
+  const fromLabel =
     result?.requestedSource && result.requestedSource !== AUTO_DETECT
       ? languageName(result.requestedSource)
       : result?.detectedSource
-        ? `Detected: ${languageName(result.detectedSource)}`
+        ? `${languageName(result.detectedSource)} (detected)`
         : "Auto-detected";
 
   return (
@@ -278,109 +241,118 @@ export function Translator() {
           }
         />
       ) : (
-        <div className="grid animate-fade-up gap-4 text-left lg:grid-cols-[1.15fr_1fr]">
-          {image ? (
-            <ImagePanel image={image} busy={busy} onReplace={handleFile} onRemove={resetWorkspace} />
-          ) : (
-            <section aria-label="Saved scan" className={`${card} flex flex-col items-center justify-center gap-4 p-8 text-center`}>
-              {historySnapshot?.thumbnail ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={historySnapshot.thumbnail} alt="" className="max-h-40 rounded-xl border border-line shadow-card" />
-              ) : (
-                <ImagePlus className="size-10 text-ink-muted" aria-hidden="true" />
-              )}
-              <p className="max-w-sm text-sm text-ink-soft">
-                Opened from Recent Scans. The original image isn&apos;t stored, but you can translate the text into
-                other languages.
-              </p>
-              <button type="button" className={btn.secondary} onClick={resetWorkspace}>
-                <ImagePlus className="size-4" aria-hidden="true" />
-                Upload a new image
-              </button>
-            </section>
-          )}
+        <div className="grid animate-fade-up gap-4 text-left lg:grid-cols-[1.4fr_1fr]">
+          <ImagePanel
+            original={image ?? undefined}
+            translatedUrl={result?.imageUrl}
+            title={result?.title}
+            busy={busy}
+            onReplace={handleFile}
+            onRemove={resetWorkspace}
+          />
 
           <section aria-label="Translation settings" className={`${card} flex flex-col gap-5 p-5 sm:p-6`}>
-            <div>
-              <h2 className="text-lg font-bold text-ink">Translation</h2>
-              <p className="mt-0.5 text-sm text-ink-muted">We&apos;ll extract the text and translate it in one step.</p>
-            </div>
-
-            <LanguageSelect
-              id="source-language"
-              label="Source Language"
-              value={source}
-              onChange={setSource}
-              includeAuto
-              disabled={busy}
-            />
-            <LanguageSelect
-              id="target-language"
-              label="Translate To"
-              value={target}
-              onChange={setPreferredTarget}
-              disabled={busy}
-            />
-
-            {source === AUTO_DETECT && image && (
-              <p className="flex gap-2 rounded-xl bg-surface p-3 text-xs leading-relaxed text-ink-soft">
-                <Info className="mt-0.5 size-4 shrink-0 text-brand-600" aria-hidden="true" />
-                Auto Detect works best for Latin-script languages. For Arabic, Chinese, Japanese, Hindi and other
-                scripts, pick the source language for accurate text recognition.
-              </p>
+            {result ? (
+              <div aria-live="polite">
+                <p className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-emerald-700">
+                  <CircleCheck className="size-4" aria-hidden="true" />
+                  Translation complete
+                </p>
+                <p className="mt-3 text-sm text-ink-soft">
+                  {fromLabel} <ArrowRight className="inline size-3.5" aria-hidden="true" />{" "}
+                  <strong className="text-ink">{languageName(result.target)}</strong>
+                </p>
+                <button type="button" onClick={download} className={`${btn.primary} mt-4 w-full`}>
+                  <ImageDown className="size-5" aria-hidden="true" />
+                  {result.blob ? "Download Translated Image" : "Download Preview"}
+                </button>
+              </div>
+            ) : (
+              <div>
+                <h2 className="text-lg font-bold text-ink">Translate this image</h2>
+                <p className="mt-0.5 text-sm text-ink-muted">
+                  We&apos;ll replace the text in your image with the translation.
+                </p>
+              </div>
             )}
 
-            <div className="mt-auto space-y-4">
-              {busy && <ProgressIndicator stage={stage} label={progress.label} value={progress.value} />}
-              <button
-                ref={translateButtonRef}
-                type="button"
-                onClick={() => run()}
-                disabled={busy}
-                className={`${btn.primary} w-full py-3.5 text-base`}
-              >
-                {busy ? (
-                  <>
-                    <span className="size-4 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden="true" />
-                    {stage === "extracting" ? "Extracting text…" : "Translating…"}
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="size-5" aria-hidden="true" />
-                    Translate Now
-                    <ArrowRight className="size-4" aria-hidden="true" />
-                  </>
+            {result?.fromHistory ? (
+              <p className="flex gap-2 rounded-xl bg-surface p-3 text-sm leading-relaxed text-ink-soft">
+                <Info className="mt-0.5 size-4 shrink-0 text-brand-600" aria-hidden="true" />
+                Opened from Recent Scans. Only a small preview is saved in your browser — upload the image again to
+                translate it into another language or get the full-resolution version.
+              </p>
+            ) : (
+              <>
+                {result && <hr className="border-line" />}
+                {result && <p className="-mb-2 text-sm font-semibold text-ink">Translate into another language</p>}
+                <LanguageSelect
+                  id="source-language"
+                  label="Source Language"
+                  value={source}
+                  onChange={setSource}
+                  includeAuto
+                  disabled={busy}
+                />
+                <LanguageSelect
+                  id="target-language"
+                  label="Translate To"
+                  value={target}
+                  onChange={setPreferredTarget}
+                  disabled={busy}
+                />
+
+                {source === AUTO_DETECT && (
+                  <p className="flex gap-2 rounded-xl bg-surface p-3 text-xs leading-relaxed text-ink-soft">
+                    <Info className="mt-0.5 size-4 shrink-0 text-brand-600" aria-hidden="true" />
+                    Auto Detect works best for Latin-script languages. For Arabic, Chinese, Japanese, Hindi and other
+                    scripts, pick the source language for accurate results.
+                  </p>
                 )}
-              </button>
-            </div>
+
+                {result?.lowConfidence && (
+                  <p className="flex gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-relaxed text-amber-900">
+                    <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                    Some text may not have been recognised accurately. If it isn&apos;t in a Latin script, choose its
+                    language under Source Language and translate again.
+                  </p>
+                )}
+
+                <div className="mt-auto space-y-4">
+                  {busy && <ProgressIndicator stage={stage} label={progress.label} value={progress.value} />}
+                  <button
+                    ref={translateButtonRef}
+                    type="button"
+                    onClick={run}
+                    disabled={busy || upToDate}
+                    className={`${result ? btn.secondary : btn.primary} w-full py-3.5 text-base`}
+                  >
+                    {busy ? (
+                      <>
+                        <span
+                          className="size-4 animate-spin rounded-full border-2 border-current/30 border-t-current"
+                          aria-hidden="true"
+                        />
+                        {stage === "reading" ? "Reading text…" : "Translating…"}
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="size-5" aria-hidden="true" />
+                        {result ? "Translate Again" : "Translate Now"}
+                        <ArrowRight className="size-4" aria-hidden="true" />
+                      </>
+                    )}
+                  </button>
+                  {upToDate && !busy && (
+                    <p className="-mt-2 text-center text-xs text-ink-muted">
+                      Pick a different language to translate again.
+                    </p>
+                  )}
+                </div>
+              </>
+            )}
           </section>
         </div>
-      )}
-
-      {result && (
-        <ResultsPanel
-          ref={resultsRef}
-          key={result.originalText + result.target}
-          originalText={originalText}
-          sourceLabel={sourceLabel}
-          sourceCode={result.requestedSource !== AUTO_DETECT ? result.requestedSource : result.detectedSource}
-          onOriginalCommit={(text) => {
-            setOriginalText(text);
-            setEdited(true);
-          }}
-          edited={edited}
-          translatedText={result.translatedText}
-          target={result.target}
-          selectedTarget={target}
-          onTargetChange={setPreferredTarget}
-          onTranslateAgain={() => run()}
-          onDownloadImage={downloadImage}
-          canOverlay={Boolean(image && result.segments)}
-          busy={busy}
-          filenameBase={baseFilename(image?.name ?? historySnapshot?.title ?? "translation")}
-          lowConfidence={result.lowConfidence}
-          stale={stale}
-        />
       )}
 
       <RecentScans onOpen={openFromHistory} />

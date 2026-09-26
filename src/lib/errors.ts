@@ -29,12 +29,12 @@ export const ERROR_MESSAGES: Record<AppErrorCode, { title: string; message: stri
     message: "We couldn't find readable text in this image. Try uploading a clearer image.",
   },
   OCR_FAILED: {
-    title: "Text extraction failed",
+    title: "We couldn't read this image",
     message: "Something went wrong while reading the image. Please try again, or try a different image.",
   },
   TRANSLATION_FAILED: {
     title: "Translation failed",
-    message: "We extracted the text but couldn't translate it. Please try again in a moment.",
+    message: "We found the text but couldn't translate it. Please try again in a moment.",
   },
   LANGUAGE_UNSUPPORTED: {
     title: "Language pair not supported",

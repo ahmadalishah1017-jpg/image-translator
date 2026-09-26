@@ -49,9 +49,9 @@ export function RecentScans({ onOpen }: { onOpen: (record: ScanRecord) => void }
                 onClick={() => onOpen(item)}
                 className="flex w-full items-center gap-3 rounded-xl border border-line p-3 pr-11 text-left transition hover:border-brand-100 hover:bg-brand-50/50"
               >
-                {item.thumbnail ? (
+                {item.preview ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={item.thumbnail} alt="" className="size-12 shrink-0 rounded-lg border border-line object-cover" />
+                  <img src={item.preview} alt="" className="size-12 shrink-0 rounded-lg border border-line object-cover" />
                 ) : (
                   <span className="grid size-12 shrink-0 place-items-center rounded-lg bg-surface">
                     <FileText className="size-5 text-ink-muted" aria-hidden="true" />

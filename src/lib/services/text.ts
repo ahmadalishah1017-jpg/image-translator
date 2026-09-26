@@ -44,31 +44,3 @@ export function groupLines(lines: string[], heights?: number[]): number[][] {
   });
   return groups;
 }
-
-export interface TextUnit {
-  text: string;
-  /** Units sharing a paragraph number are joined with a line break; paragraphs with a blank line. */
-  paragraph: number;
-}
-
-/** Split free text (e.g. after the user edits it) into translatable units. */
-export function textToUnits(text: string): TextUnit[] {
-  const units: TextUnit[] = [];
-  text
-    .split(/\n\s*\n/)
-    .map((p) => p.split("\n").map((l) => l.trim()).filter(Boolean))
-    .filter((lines) => lines.length)
-    .forEach((lines, paragraph) => {
-      for (const group of groupLines(lines)) {
-        units.push({ text: group.map((i) => lines[i]).join(" "), paragraph });
-      }
-    });
-  return units;
-}
-
-export function joinUnits(values: string[], paragraphs: number[]): string {
-  return values.reduce((out, value, i) => {
-    if (i === 0) return value;
-    return out + (paragraphs[i] === paragraphs[i - 1] ? "\n" : "\n\n") + value;
-  }, "");
-}

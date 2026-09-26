@@ -8,8 +8,6 @@ export interface BoundingBox {
 /** A translatable unit of recognized text (a heading, list item, or wrapped sentence) and where it sits. */
 export interface TextSegment {
   lines: string[];
-  /** Index of the OCR paragraph this segment belongs to. */
-  paragraph: number;
   bbox: BoundingBox;
   /** Bounding boxes of the individual lines, used to estimate font size. */
   lineBoxes: BoundingBox[];

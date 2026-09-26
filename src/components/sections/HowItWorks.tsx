@@ -17,8 +17,8 @@ const STEPS = [
   },
   {
     icon: ScanText,
-    title: "Extract",
-    text: "AI-powered OCR identifies the text inside your image, line by line.",
+    title: "Detect",
+    text: "AI-powered OCR finds every line of text in your image and where it sits.",
     art: (
       <div className="relative mx-auto h-20 w-28 overflow-hidden rounded-lg border border-line bg-white p-3">
         <div className="space-y-1.5">
@@ -34,7 +34,7 @@ const STEPS = [
   {
     icon: Languages,
     title: "Translate",
-    text: "Choose your language and instantly receive the translated text — ready to copy or download.",
+    text: "Get the same image back with the text in your language — ready to download.",
     art: (
       <div className="mx-auto flex h-20 w-28 items-center justify-center gap-2">
         <span className="grid size-10 place-items-center rounded-xl border border-line bg-white text-lg font-bold text-ink">

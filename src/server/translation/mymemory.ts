@@ -55,6 +55,10 @@ export function createMyMemoryProvider(email?: string): TranslationProvider {
     const params = new URLSearchParams({
       q: text,
       langpair: `${source === "auto" ? "Autodetect" : source}|${target}`,
+      // Skip MyMemory's public translation memory: it returns translations of merely *similar*
+      // sentences (e.g. with different numbers or times). Use its machine translation instead.
+      onlyprivate: "1",
+      mt: "1",
     });
     if (email) params.set("de", email);
     const res = await fetchWithTimeout(`https://api.mymemory.translated.net/get?${params}`, {});

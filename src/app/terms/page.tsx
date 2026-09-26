@@ -13,7 +13,7 @@ export default function TermsPage() {
     <ContentPage title="Terms of Service" intro="By using SnapTranslate you agree to these terms. They're short, we promise.">
       <h2>Using the service</h2>
       <p>
-        SnapTranslate is a free tool for extracting and translating text from images. You may use it for personal
+        SnapTranslate is a free tool for translating the text in images. You may use it for personal
         and commercial purposes, provided you only upload images you have the right to use and you don&apos;t use the
         service to break the law or to overload it with automated requests.
       </p>

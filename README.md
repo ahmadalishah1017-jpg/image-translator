@@ -1,8 +1,8 @@
 # imageTranslator — SnapTranslate
 
-An online image translator: upload a photo or screenshot, extract its text with OCR, translate it, and copy or download the result.
+An online image translator: upload a photo or screenshot and get the same image back with its text translated in place.
 
-**Upload → Extract → Translate → Copy/Download**
+**Upload → Translate → Download the translated image**
 
 Built with Next.js (App Router), TypeScript, and Tailwind CSS.
 
@@ -13,10 +13,10 @@ Built with Next.js (App Router), TypeScript, and Tailwind CSS.
 - **In-browser OCR** with [Tesseract.js](https://github.com/naptha/tesseract.js). Images are never uploaded.
 - Automatic language detection for Latin-script text: an English pass, detection with `franc-min`, then a second pass with the detected language's model
 - Source/target selectors covering 90+ languages
-- Original and translated text side by side, with copy, edit, TXT download, and a bilingual document download
-- Re-translate into another language without uploading or running OCR again
-- **Translated image** download: each translated segment is painted over the original text area, using the sampled background and text colours. If no layout is available (for example after editing the text), you get a clean text card instead.
-- **Recent Scans** kept in `localStorage` (text plus a small thumbnail), with per-item delete and **Clear History**
+- **Text replaced in place**: each line or block is erased with its sampled background colour and redrawn in the target language with the sampled text colour and a matching size
+- Viewer with a **Translated / Original** toggle and zoom, plus a full-resolution PNG download
+- Re-translate into another language without uploading or reading the image again
+- **Recent Scans** kept in `localStorage` (a small preview of each translated image), with per-item delete and **Clear History**
 - Friendly error states for unsupported files, oversized images, no text found, OCR failure, translation failure, network errors, and rate limits
 - SEO: metadata, Open Graph image, JSON-LD (`WebApplication` + `FAQPage`), sitemap, and robots.txt
 - Accessibility: keyboard navigation throughout, skip link, labelled controls, live regions for progress and copy feedback, and respect for `prefers-reduced-motion`

@@ -3,10 +3,14 @@
 import { Maximize2, RefreshCw, Trash2, ZoomIn, ZoomOut } from "lucide-react";
 import { useRef, useState } from "react";
 import { btn, card } from "@/components/ui";
-import { ACCEPT_ATTRIBUTE, type LoadedImage } from "@/lib/image";
+import { ACCEPT_ATTRIBUTE } from "@/lib/image";
 
 interface Props {
-  image: LoadedImage;
+  /** The uploaded image. Absent when a scan is reopened from history. */
+  original?: { url: string; name: string; width: number; height: number };
+  /** The translated image, once available. */
+  translatedUrl?: string;
+  title?: string;
   busy: boolean;
   onReplace: (file: File) => void;
   onRemove: () => void;
@@ -16,19 +20,46 @@ const MIN = 0.5;
 const MAX = 3;
 const STEP = 0.25;
 
-export function ImagePanel({ image, busy, onReplace, onRemove }: Props) {
+export function ImagePanel({ original, translatedUrl, title, busy, onReplace, onRemove }: Props) {
   const [zoom, setZoom] = useState(1);
+  // Remember which translated image the user switched to "Original" for, so a new translation shows by default.
+  const [originalFor, setOriginalFor] = useState<string | undefined>();
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const canCompare = Boolean(original && translatedUrl);
+  const showOriginal = !translatedUrl || (canCompare && originalFor === translatedUrl);
+  const src = showOriginal ? original?.url : translatedUrl;
+
   return (
-    <section aria-label="Original image" className={`${card} flex flex-col overflow-hidden`}>
-      <div className="flex items-center justify-between gap-2 border-b border-line px-4 py-3">
-        <div className="min-w-0">
-          <h2 className="text-sm font-bold text-ink">Original image</h2>
-          <p className="truncate text-xs text-ink-muted" title={image.name}>
-            {image.name} · {image.width}×{image.height}
-          </p>
-        </div>
+    <section aria-label="Image" className={`${card} flex flex-col overflow-hidden`}>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3">
+        {canCompare ? (
+          <div role="group" aria-label="Choose image view" className="inline-flex rounded-xl bg-surface p-1">
+            {[
+              { label: "Translated", active: !showOriginal, onClick: () => setOriginalFor(undefined) },
+              { label: "Original", active: showOriginal, onClick: () => setOriginalFor(translatedUrl) },
+            ].map((tab) => (
+              <button
+                key={tab.label}
+                type="button"
+                aria-pressed={tab.active}
+                onClick={tab.onClick}
+                className={`rounded-lg px-3.5 py-1.5 text-sm font-semibold transition ${
+                  tab.active ? "bg-white text-ink shadow-sm" : "text-ink-muted hover:text-ink"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="min-w-0">
+            <h2 className="text-sm font-bold text-ink">{translatedUrl ? "Translated image" : "Original image"}</h2>
+            <p className="truncate text-xs text-ink-muted" title={original?.name ?? title}>
+              {original ? `${original.name} · ${original.width}×${original.height}` : title}
+            </p>
+          </div>
+        )}
         <div className="flex shrink-0 items-center gap-1">
           <button
             type="button"
@@ -58,7 +89,7 @@ export function ImagePanel({ image, busy, onReplace, onRemove }: Props) {
       </div>
 
       <div
-        className="relative h-72 overflow-auto bg-[repeating-conic-gradient(#f1f3f9_0%_25%,#ffffff_0%_50%)] bg-[length:20px_20px] sm:h-96"
+        className="relative h-80 overflow-auto bg-[repeating-conic-gradient(#f1f3f9_0%_25%,#ffffff_0%_50%)] bg-[length:20px_20px] sm:h-[28rem]"
         tabIndex={0}
         aria-label="Image preview, scrollable when zoomed"
       >
@@ -66,14 +97,17 @@ export function ImagePanel({ image, busy, onReplace, onRemove }: Props) {
           className="flex min-h-full items-center justify-center p-3"
           style={{ width: `${zoom * 100}%`, minWidth: "100%" }}
         >
-          {/* Object URL of a local file — next/image optimisation doesn't apply. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={image.url}
-            alt="Uploaded image to translate"
-            className="max-w-full rounded-lg shadow-card"
-            style={zoom === 1 ? { maxHeight: "100%" } : { width: "100%" }}
-          />
+          {src && (
+            // Object/data URL of a local image — next/image optimisation doesn't apply.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              key={src}
+              src={src}
+              alt={showOriginal ? "Original uploaded image" : "Image with its text translated"}
+              className="max-w-full animate-fade-up rounded-lg shadow-card"
+              style={zoom === 1 ? { maxHeight: "100%" } : { width: "100%" }}
+            />
+          )}
         </div>
       </div>
 
@@ -85,7 +119,7 @@ export function ImagePanel({ image, busy, onReplace, onRemove }: Props) {
           disabled={busy}
         >
           <RefreshCw className="size-4" aria-hidden="true" />
-          Replace image
+          {original ? "Replace image" : "Upload new image"}
         </button>
         <button
           type="button"

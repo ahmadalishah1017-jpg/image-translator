@@ -1,12 +1,12 @@
-import { Copy, FileText, Globe, MonitorSmartphone, ScanText, ShieldCheck } from "lucide-react";
+import { FileText, ImageDown, Globe, MonitorSmartphone, ScanText, ShieldCheck } from "lucide-react";
 import { eyebrow, sectionLead, sectionTitle } from "@/components/ui";
 import { LANGUAGE_COUNT } from "@/lib/languages";
 
 const FEATURES = [
   {
     icon: ScanText,
-    title: "Instant OCR",
-    text: "Extract text from photos and screenshots quickly. Recognition runs right in your browser — no waiting in a server queue.",
+    title: "Text Stays in Place",
+    text: "The translation is drawn right where the original text was, keeping your image's layout and colours.",
   },
   {
     icon: Globe,
@@ -21,17 +21,17 @@ const FEATURES = [
   {
     icon: FileText,
     title: "Document Translator",
-    text: "Extract and translate text from documents, notes, invoices, receipts and other images.",
+    text: "Translate the text in documents, notes, invoices, receipts and other images.",
   },
   {
-    icon: Copy,
-    title: "Copy & Download",
-    text: "Copy extracted or translated text in one click, download it as TXT, or save a translated image.",
+    icon: ImageDown,
+    title: "Download the Result",
+    text: "Save the translated image as a full-resolution PNG in one click, ready to share or print.",
   },
   {
     icon: ShieldCheck,
     title: "Privacy Focused",
-    text: "Your image stays on your device. Only the extracted text is sent for translation, and history lives in your browser.",
+    text: "Your image stays on your device. Only the text it contains is sent for translation, and history lives in your browser.",
   },
 ];
 

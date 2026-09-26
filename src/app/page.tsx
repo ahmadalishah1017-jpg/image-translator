@@ -60,8 +60,8 @@ export default function Home() {
                 Translate Any Image <span className="whitespace-nowrap text-brand-gradient">in Seconds</span>
               </h1>
               <p className="mx-auto mt-5 max-w-2xl text-lg leading-relaxed text-ink-soft sm:text-xl">
-                Upload a photo, screenshot, document, or sign. Our AI extracts the text and translates it instantly
-                into your preferred language.
+                Upload a photo, screenshot, document, or sign. We translate the text right inside your image —
+                same picture, same layout, in your language.
               </p>
             </div>
             <div className="mx-auto mt-10 max-w-6xl">

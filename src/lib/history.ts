@@ -1,6 +1,9 @@
 import { createLocalStore } from "./local-store";
 
-/** Stored only in this browser's localStorage. The full image is never stored — only a small thumbnail. */
+/**
+ * Stored only in this browser's localStorage. Full-resolution images are never stored —
+ * only a small preview of the translated image.
+ */
 export interface ScanRecord {
   id: string;
   title: string;
@@ -8,22 +11,21 @@ export interface ScanRecord {
   sourceLang: string;
   detectedLang?: string;
   targetLang: string;
-  originalText: string;
-  translatedText: string;
-  thumbnail?: string;
+  /** Downscaled JPEG data URL of the translated image. */
+  preview?: string;
 }
 
 const MAX_ITEMS = 20;
 
-const store = createLocalStore<ScanRecord[]>("snaptranslate:history:v1", []);
+const store = createLocalStore<ScanRecord[]>("snaptranslate:history:v2", []);
 
 export const useScanHistory = store.useValue;
 
 export function addScan(record: ScanRecord) {
   let items = [record, ...store.get().filter((r) => r.id !== record.id)].slice(0, MAX_ITEMS);
-  // If storage is full, drop thumbnails, then the oldest entries, until it fits.
+  // If storage is full, drop older previews, then the oldest entries, until it fits.
   if (store.set(items)) return;
-  items = items.map((r, i) => (i === 0 ? r : { ...r, thumbnail: undefined }));
+  items = items.map((r, i) => (i === 0 ? r : { ...r, preview: undefined }));
   while (!store.set(items) && items.length > 1) {
     items = items.slice(0, -1);
   }
@@ -37,8 +39,9 @@ export function clearHistory() {
   store.set([]);
 }
 
-export function scanTitle(text: string, fallback: string): string {
-  const firstLine = text.split("\n").map((l) => l.trim()).find((l) => l.length > 1);
-  const base = firstLine ?? fallback;
-  return base.length > 42 ? `${base.slice(0, 40).trimEnd()}…` : base;
+/** "IMG_2041.jpg" → "IMG 2041", "pasted-image.png" → "Pasted image". */
+export function scanTitle(filename: string): string {
+  const base = filename.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ").trim() || "Image";
+  const title = base.charAt(0).toUpperCase() + base.slice(1);
+  return title.length > 42 ? `${title.slice(0, 40).trimEnd()}…` : title;
 }

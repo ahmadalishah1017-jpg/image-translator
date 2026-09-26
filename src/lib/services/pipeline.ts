@@ -3,7 +3,7 @@ import { AppError, toAppError } from "@/lib/errors";
 import { prepareForOcr, scaleBox, type LoadedImage } from "@/lib/image";
 import { AUTO_DETECT, getLanguage, languageFromIso3, languageName, ocrLangsFor } from "@/lib/languages";
 import type { OcrProvider, TextSegment } from "./ocr/types";
-import { joinUnits, NO_SPACE_SCRIPT } from "./text";
+import { NO_SPACE_SCRIPT } from "./text";
 import { TRANSLATION_LIMITS, type TranslationService } from "./translation/types";
 
 /**
@@ -36,16 +36,6 @@ export function segmentText(segment: TextSegment): string {
   return segment.lines.join(segment.lines.some((l) => NO_SPACE_SCRIPT.test(l)) ? "" : " ");
 }
 
-/** Human-readable extracted text, preserving line breaks. */
-export function segmentsToText(segments: TextSegment[]): string {
-  return joinUnits(
-    segments.map((s) => s.lines.join("\n")),
-    segments.map((s) => s.paragraph),
-  );
-}
-
-export { joinUnits, textToUnits } from "./text";
-
 export function detectLanguage(text: string): string | undefined {
   const iso3 = franc(text, { minLength: 16 });
   return iso3 === "und" ? undefined : languageFromIso3(iso3)?.code;
@@ -77,7 +67,7 @@ export async function extractText(
 
   if (source === AUTO_DETECT) {
     // Pass 1: Latin-script model, then detect the language from the text.
-    result = await run("eng", "Extracting text…");
+    result = await run("eng", "Reading text…");
     detectedSource = detectLanguage(result.segments.map(segmentText).join(" "));
     const detected = getLanguage(detectedSource);
     // Pass 2: re-read with the detected language's model for accents/special characters.
@@ -86,7 +76,7 @@ export async function extractText(
       if (refined.segments.length && refined.confidence >= result.confidence - 5) result = refined;
     }
   } else {
-    result = await run(ocrLangsFor(source), "Extracting text…");
+    result = await run(ocrLangsFor(source), "Reading text…");
   }
 
   if (!result.segments.length) throw new AppError("NO_TEXT");

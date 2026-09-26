@@ -3,7 +3,7 @@ import Link from "next/link";
 
 const STEPS = [
   { icon: Upload, title: "Upload", text: "Your image opens locally in your browser. It isn't sent to our servers." },
-  { icon: Cpu, title: "Process", text: "Text is recognised on your device. Only the extracted text is sent to be translated." },
+  { icon: Cpu, title: "Process", text: "Text is recognised on your device. Only the text it contains is sent to be translated." },
   { icon: Eraser, title: "Delete", text: "Remove the image anytime — it's discarded when you reset or leave. History is local and clearable." },
 ];
 

@@ -27,7 +27,7 @@ export const SITE = {
   url: resolveSiteUrl(),
   title: "Image Translator — Translate Text From Photos Online",
   description:
-    "Upload an image and instantly extract and translate text with our online photo translator. Translate screenshots, documents, signs, menus, and more.",
+    "Upload an image and get it back with the text translated into your language. Translate photos, screenshots, documents, signs, menus, and more — online and free.",
   tagline: "Translate text from images quickly, simply, and privately.",
   contactEmail: "hello@snaptranslate.app",
   keywords: [

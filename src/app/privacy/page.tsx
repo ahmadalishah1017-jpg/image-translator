@@ -25,16 +25,16 @@ export default function PrivacyPage() {
         public content delivery network (jsDelivr). These downloads do not include your image.
       </p>
 
-      <h2>Extracted text</h2>
+      <h2>Text in your image</h2>
       <p>
-        To translate, the text extracted from your image is sent to our server, which forwards it to a third-party
+        To translate, the text recognised in your image is sent to our server, which forwards it to a third-party
         machine-translation provider and returns the result. We do not store this text on our servers. The
         translation provider processes it under its own terms and privacy policy.
       </p>
 
       <h2>Recent Scans</h2>
       <p>
-        Your recent translations — the extracted text, the translation, the languages and a small thumbnail — are
+        Your recent translations — a small preview of each translated image and the languages used — are
         saved in your browser&apos;s local storage so you can reopen them. This data never leaves your device. You
         can delete individual scans or clear your whole history at any time from the Recent Scans panel.
       </p>

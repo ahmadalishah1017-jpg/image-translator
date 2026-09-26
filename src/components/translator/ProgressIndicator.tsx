@@ -1,18 +1,18 @@
 import { Check, Languages, ScanText } from "lucide-react";
 
 interface Props {
-  stage: "extracting" | "translating";
+  stage: "reading" | "translating";
   label: string;
   value: number;
 }
 
 export function ProgressIndicator({ stage, label, value }: Props) {
   const steps = [
-    { key: "extracting", title: "Extracting text…", icon: ScanText },
+    { key: "reading", title: "Reading text…", icon: ScanText },
     { key: "translating", title: "Translating…", icon: Languages },
   ] as const;
-  const activeIndex = stage === "extracting" ? 0 : 1;
-  const determinate = stage === "extracting";
+  const activeIndex = stage === "reading" ? 0 : 1;
+  const determinate = stage === "reading";
 
   return (
     <div role="status" aria-live="polite" className="rounded-2xl border border-brand-100 bg-brand-50/60 p-4">
